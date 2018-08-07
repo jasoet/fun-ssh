@@ -1,0 +1,236 @@
+buildscript {
+    ext {
+        version = project.property('version')
+        bintrayUser = project.hasProperty('bintrayUser') ? project.property('bintrayUser') : System.getenv('BINTRAY_USER')
+        bintrayApiKey = project.hasProperty('bintrayApiKey') ? project.property('bintrayApiKey') : System.getenv('BINTRAY_API_KEY')
+
+        kotlinVersion = "1.2.60"
+        jschVersion = "0.1.54"
+        coroutineVersion = "0.24.0"
+
+        jUnitVersion = "5.1.0"
+        spekVersion = "1.1.5"
+        kluentVersion = "1.35"
+        logbackVersion = "1.2.3"
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+}
+
+plugins {
+    id "org.jetbrains.kotlin.jvm" version "1.2.60"
+    id "org.jetbrains.kotlin.kapt" version "1.2.60"
+    id "io.gitlab.arturbosch.detekt" version "1.0.0.RC8"
+    id "com.jfrog.bintray" version "1.8.4"
+    id 'com.github.ksoichiro.console.reporter' version '0.5.0'
+}
+
+group 'id.jasoet'
+
+apply plugin: 'maven-publish'
+apply plugin: "jacoco"
+apply plugin: "idea"
+
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVersion"
+    compile "com.jcraft:jsch:$jschVersion"
+    compile "ch.qos.logback:logback-core:$logbackVersion"
+    compile "ch.qos.logback:logback-classic:$logbackVersion"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlinVersion"
+    testCompile "org.amshove.kluent:kluent:$kluentVersion"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$jUnitVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$jUnitVersion"
+
+    testCompile("org.jetbrains.spek:spek-api:$spekVersion") {
+        exclude group: 'org.jetbrains.kotlin'
+    }
+    testRuntime("org.jetbrains.spek:spek-junit-platform-engine:$spekVersion") {
+        exclude group: 'org.jetbrains.kotlin'
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.0"
+}
+
+jacocoTestReport {
+    group = "Reporting"
+    reports {
+        xml.enabled true
+        html.enabled false
+        csv.enabled false
+    }
+}
+
+detekt {
+    version = "1.0.0.RC8"
+    profile("main") {
+        input = "$projectDir/src/main/kotlin"
+        config = "$rootDir/detekt.yml"
+        filters = ".*test.*,.*/resources/.*,.*/tmp/.*"
+    }
+}
+
+test {
+    finalizedBy detektCheck
+    finalizedBy jacocoTestReport
+
+    useJUnitPlatform {
+        includeEngines 'spek'
+    }
+
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
+}
+
+compileKotlin {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+        apiVersion = "1.2"
+        languageVersion = "1.2"
+        allWarningsAsErrors = true
+    }
+}
+
+compileTestKotlin {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+        apiVersion = "1.2"
+        languageVersion = "1.2"
+        allWarningsAsErrors = true
+    }
+}
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+
+        sourceDirs += file('build/generated/source/kapt/main')
+        testSourceDirs += file('build/generated/source/kapt/test')
+
+        sourceDirs += file('build/generated/source/kaptKotlin/main')
+        testSourceDirs += file('build/generated/source/kaptKotlin/test')
+
+        sourceDirs += file('build/tmp/kapt/main/kotlinGenerated')
+        testSourceDirs += file('build/tmp/kapt/test/kotlinGeneratedst')
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin'
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "jasoet"
+            name "Deny Prasetyo"
+            email "jasoet87@gmail.com"
+        }
+    }
+
+    scm {
+        url "https://github.com/jasoet/fun-ssh"
+    }
+}
+
+publishing {
+    publications {
+        FunPublication(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+            groupId 'id.jasoet'
+            artifactId "${project.name}"
+            version "${version}"
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', 'Simple Jsch Wrapper on Kotlin')
+                root.appendNode('name', 'fun-ssh')
+                root.appendNode('url', 'https://github.com/jasoet/fun-ssh')
+                root.children().last() + pomConfig
+            }
+        }
+    }
+}
+
+bintray {
+    user = "${bintrayUser}"
+    key = "${bintrayApiKey}"
+    publications = ['FunPublication']
+    publish = true
+    override = false
+
+    pkg {
+        name = "${project.name}"
+        desc = "Simple Jsc Wrapper on Kotlin"
+        repo = 'fun'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/jasoet/fun-ssh'
+        issueTrackerUrl = 'https://github.com/jasoet/fun-ssh/issues'
+        labels = ['kotlin', 'fun', 'ssh']
+        publicDownloadNumbers = true
+        version {
+            name = "${project.version}"
+            vcsTag = "${project.version}"
+            desc = "Fun Ssh version ${project.version}."
+        }
+    }
+}
+
+task compile(dependsOn: "testClasses")
+
+wrapper {
+    gradleVersion = '4.9'
+}
