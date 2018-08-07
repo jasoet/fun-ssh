@@ -37,9 +37,9 @@ apply plugin: "idea"
 
 
 repositories {
-    mavenLocal()
     mavenCentral()
     jcenter()
+    mavenLocal()
 }
 
 dependencies {
