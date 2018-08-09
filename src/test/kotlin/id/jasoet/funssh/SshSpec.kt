@@ -14,143 +14,62 @@
  * limitations under the License.
  */
 
-package id.jasoet.funkommand
+package id.jasoet.funssh
 
-import org.amshove.kluent.shouldBe
-import org.amshove.kluent.shouldBeNull
-import org.amshove.kluent.shouldEqualTo
+import com.jcraft.jsch.ChannelExec
+import kotlinx.coroutines.experimental.runBlocking
+import org.amshove.kluent.shouldBeGreaterThan
 import org.amshove.kluent.shouldNotBeNull
 import org.amshove.kluent.shouldNotBeNullOrBlank
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.given
 import org.jetbrains.spek.api.dsl.it
 import org.jetbrains.spek.api.dsl.on
-import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
-import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.util.UUID
-import kotlin.test.assertFailsWith
+import java.util.concurrent.atomic.AtomicInteger
 
-object KommandSpec : Spek({
+object SshSpec : Spek({
 
-    given("Command Extension") {
+    given("Ssh Extension") {
 
-        on("Executing Command") {
-            it("should return zero for success command") {
-                val inputStream = listOf("ls", "-alh").execute()
-                inputStream.shouldNotBeNull()
-
-                val tryReturn = listOf("ls", "-alh").tryExecute()
-                tryReturn.isSuccess() shouldEqualTo true
-
-                "ls -alh".execute().shouldNotBeNull()
-                "ls -alh ".tryExecute().isSuccess() shouldEqualTo true
-            }
-
-            it("should throw exception for non exist command") {
-                assertFailsWith(IOException::class) {
-                    listOf("notExistCommand", "-alh").execute()
-                }
-
-                val tryReturn = listOf("notExistCommand", "-alh").tryExecute()
-                tryReturn.isFailure() shouldEqualTo true
-
-                assertFailsWith(IOException::class) {
-                    "notExistCommand -alh".execute()
-                }
-
-                "notExistCommand -alh".tryExecute().isFailure() shouldEqualTo true
-            }
-        }
-
-        on("Handling wrong input/output type") {
-
-            it("should throw IllegalArgumentException when receive wrong input type") {
-                assertFailsWith(IllegalArgumentException::class) {
-                    listOf("ls", "-alh").execute(input = 12)
-                }
-                val tryReturn = listOf("ls", "-alh").tryExecute(input = 24)
-                tryReturn.isSuccess() shouldEqualTo false
-            }
-
-            it("should throw IllegalArgumentException when receive wrong output type") {
-                assertFailsWith(IllegalArgumentException::class) {
-                    listOf("ls", "-alh").execute(output = 12)
-                }
-                val tryReturn = listOf("ls", "-alh").tryExecute(output = 24)
-                tryReturn.isSuccess() shouldEqualTo false
-            }
-        }
-
-        on("Handling input") {
-            val tmpDir: String = System.getProperty("java.io.tmpdir")
-            val path = Paths.get(tmpDir, UUID.randomUUID().toString())
-
-            val fileContent = """
-                    it("should throw IllegalArgumentException when receive wrong output type") {
-                        assertFailsWith(IllegalArgumentException::class) {
-                            listOf("ls", "-alh").execute(output = 12)
+        on("Executing Remote Command") {
+            it("should return command result") {
+                runBlocking {
+                    val text = createSession(host = SshConfig.host, username = SshConfig.username)
+                        .use {
+                            val exec = it.createChannel<ChannelExec>()
+                            exec.setCommand("ls -alh")
+                            exec.setErrStream(System.err)
+                            exec.use {
+                                exec.inputStream.asString()
+                            }
                         }
-                        val tryReturn = listOf("ls", "-alh").tryExecute(output = 24)
-                        tryReturn.isSuccess() shouldEqualTo false
-                    }
-            """.trimIndent()
 
-            Files.write(path, fileContent.toByteArray())
-            val inputFile = path.toFile()
-
-            it("should able to process string input") {
-                val inputStream = listOf("cat").execute(input = fileContent)
-                inputStream.shouldNotBeNull()
-            }
-
-            it("should able to process file input") {
-                val inputStream = listOf("cat").execute(input = inputFile)
-                inputStream.shouldNotBeNull()
-            }
-
-            it("should able to process InputStream input") {
-                val inputStream = "cat".execute(input = FileInputStream(inputFile))
-                inputStream.shouldNotBeNull()
-            }
-
-            it("should able to process file input and return String") {
-                val inputStream = "cat".executeToString(input = inputFile)
-                inputStream.shouldNotBeNullOrBlank()
-            }
-        }
-
-
-        on("Handling output") {
-            val tmpDir: String = System.getProperty("java.io.tmpdir")
-
-            it("should able to redirect output to standard out") {
-                val inputStream = listOf("ls", "-alh").execute(output = System.out)
-                inputStream.shouldBeNull()
-            }
-
-            it("should able to process file output") {
-                val outputFile = Paths.get(tmpDir, UUID.randomUUID().toString()).toFile()
-                val inputStream = listOf("ls", "-alh").execute(output = outputFile)
-                inputStream.shouldBeNull()
-                outputFile.exists() shouldBe true
-            }
-
-            it("should able to process OutputStream output") {
-                val byteOutputStream = ByteArrayOutputStream()
-                val inputStream = listOf("ls", "-alh").execute(output = byteOutputStream)
-                inputStream.shouldBeNull()
-                val stringResult = byteOutputStream.use {
-                    it.toString(Charsets.UTF_8.name())
+                    text.shouldNotBeNullOrBlank()
                 }
-                println(stringResult)
-                stringResult.shouldNotBeNullOrBlank()
             }
 
-        }
+            it("should return command result using helper") {
+                runBlocking {
+                    val text = "ls -alh".executeRemoteAsString(host = SshConfig.host, username = SshConfig.username)
+                    text.shouldNotBeNullOrBlank()
+                }
+            }
 
+            it("should return line sequence") {
+                runBlocking {
+                    val pingCount =
+                        "ping -c 2 google.com".executeRemote(host = SshConfig.host, username = SshConfig.username) {
+                            val counter = AtomicInteger()
+                            it.forEachLine {
+                                counter.incrementAndGet()
+                                it.shouldNotBeNull()
+                            }
+                            counter.get()
+                        }
+                    pingCount.shouldBeGreaterThan(5)
+                }
+            }
+        }
     }
 
 })

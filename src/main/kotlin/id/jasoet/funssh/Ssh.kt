@@ -46,7 +46,7 @@ enum class ChannelType(val type: String) {
 }
 
 private fun homeDir(): String {
-    return System.getProperty("java.home")
+    return System.getProperty("user.home")
 }
 
 private fun Session.setConfig(propertyMap: Map<String, String>) {
@@ -58,7 +58,14 @@ private fun Session.setConfig(propertyMap: Map<String, String>) {
     this.setConfig(config)
 }
 
-private inline fun <reified T : Channel> Session.openChannel(): T {
+/**
+ * Open the SSH Session Channel. Must be invoked inside connected session.
+ *
+ * @receiver [Session]
+ * @return [Channel]
+ * @since 1.0.0
+ */
+inline fun <reified T : Channel> Session.createChannel(): T {
     return when (T::class) {
         ChannelShell::class -> this.openChannel(ChannelType.SHELL) as T
         ChannelExec::class -> this.openChannel(ChannelType.EXEC) as T
@@ -69,9 +76,9 @@ private inline fun <reified T : Channel> Session.openChannel(): T {
     }
 }
 
-private val defaultKeyLocation = "${homeDir()}$separator.ssh${separator}id_rsa"
-private val defaultKnownHostLocation = "${homeDir()}$separator.ssh${separator}known_hosts"
-private const val DEFAULT_SSH_PORT = 22
+internal val defaultKeyLocation = "${homeDir()}$separator.ssh${separator}id_rsa"
+internal val defaultKnownHostLocation = "${homeDir()}$separator.ssh${separator}known_hosts"
+internal const val DEFAULT_SSH_PORT = 22
 
 /**
  * Create [Ssh] instance that will be used to create SSH Session.
@@ -153,7 +160,7 @@ fun Ssh.createSession(
  * @return [T] result from [operation]
  * @since 1.0.0
  */
-suspend fun <T> Session.use(timeout: Int = 0, operation: suspend Session.() -> T): T {
+suspend fun <T> Session.use(timeout: Int = 0, operation: suspend (Session) -> T): T {
     try {
         if (!this.isConnected) {
             this.connect(timeout)
@@ -164,14 +171,6 @@ suspend fun <T> Session.use(timeout: Int = 0, operation: suspend Session.() -> T
     }
 }
 
-/**
- * Open the SSH Session Channel. Must be invoked inside connected session.
- *
- * @receiver [Session]
- * @param type [ChannelType] channel type
- * @return [Channel]
- * @since 1.0.0
- */
 fun Session.openChannel(type: ChannelType): Channel {
     return this.openChannel(type.type)
 }
@@ -185,7 +184,7 @@ fun Session.openChannel(type: ChannelType): Channel {
  * @return [T]  result from the [operation]
  * @since 1.0.0
  */
-suspend fun <T> Channel.use(timeout: Int = 0, operation: suspend Channel.() -> T): T {
+suspend fun <T> Channel.use(timeout: Int = 0, operation: suspend (Channel) -> T): T {
     try {
         if (!this.isConnected) {
             this.connect(timeout)
@@ -194,4 +193,39 @@ suspend fun <T> Channel.use(timeout: Int = 0, operation: suspend Channel.() -> T
     } finally {
         this.disconnect()
     }
+}
+
+/**
+ * Create [Session].
+ * @See createSsh
+ * @See createSession
+ *
+ * @param host SSH host.
+ * @param username SSH username.
+ * @param password optional SSH password, will use private key auth if not defined.
+ * @param port SSH port, 22 as default.
+ * @param daemonThread set whether this session is daemon thread or user thread. JVM exits when the only
+ * threads running are all daemon threads.
+ * @param properties additional properties for [Session].
+ * @param customize function to customize [Session] creation.
+ * @return [Session] instance.
+ * @receiver [Ssh] instance.
+ * @since 1.0.0
+ */
+fun createSession(
+    host: String,
+    username: String,
+    password: String = "",
+    privateKeyLocation: String = defaultKeyLocation,
+    passphrase: String = "",
+    knownHostLocation: String = defaultKnownHostLocation,
+    port: Int = DEFAULT_SSH_PORT,
+    daemonThread: Boolean = false,
+    properties: Map<String, String> = emptyMap(),
+    customize: (Session) -> Unit = {}
+): Session {
+    val session = createSsh(privateKeyLocation, passphrase, knownHostLocation)
+        .createSession(host, username, password, port, daemonThread, properties)
+    customize(session)
+    return session
 }

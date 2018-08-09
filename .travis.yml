@@ -12,9 +12,9 @@ before_cache:
 
 before_install:
 - openssl aes-256-cbc -K $encrypted_ab5ee33e4b09_key -iv $encrypted_ab5ee33e4b09_iv
-  -in file/host.enc -out $HOME/host -d
+  -in files/host.enc -out $KHOST_LOCATION -d
 - openssl aes-256-cbc -K $encrypted_ab5ee33e4b09_key -iv $encrypted_ab5ee33e4b09_iv
-  -in file/key.enc -out $HOME/key -d
+  -in files/key.enc -out $KEY_LOCATION -d
 
 cache:
   directories:
@@ -25,5 +25,5 @@ script:
 - "./gradlew clean build"
 
 after_success:
-- "./gradlew bintrayUpload"
-- bash <(curl -s https://codecov.io/bash) -t TODO
+#- "./gradlew bintrayUpload"
+- bash <(curl -s https://codecov.io/bash) -t 16292256-8927-4a5a-93bf-234c6693c118
