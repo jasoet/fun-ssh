@@ -7,7 +7,7 @@ buildscript {
         kotlinVersion = "1.2.60"
         jschVersion = "0.1.54"
         coroutineVersion = "0.24.0"
-
+        commonsIOVersion = '2.5'
         jUnitVersion = "5.1.0"
         spekVersion = "1.1.5"
         kluentVersion = "1.35"
@@ -46,6 +46,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
     compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutineVersion"
     compile "com.jcraft:jsch:$jschVersion"
+    compile "commons-io:commons-io:${commonsIOVersion}"
     compile "ch.qos.logback:logback-core:$logbackVersion"
     compile "ch.qos.logback:logback-classic:$logbackVersion"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
