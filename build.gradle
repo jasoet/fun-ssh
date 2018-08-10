@@ -211,7 +211,7 @@ bintray {
     key = "${bintrayApiKey}"
     publications = ['FunPublication']
     publish = true
-    override = false
+    override = true
 
     pkg {
         name = "${project.name}"
