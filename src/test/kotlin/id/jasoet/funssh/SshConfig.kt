@@ -22,4 +22,8 @@ internal object SshConfig {
         sshUsername ?: throw IllegalArgumentException("No Property Found!")
     }
 
+    val password by lazy {
+        val sshPassword = System.getenv("SSH_PASSWORD") ?: propertiesFile.getProperty("PASSWORD")
+        sshPassword ?: throw IllegalArgumentException("No Property Found!")
+    }
 }

@@ -34,7 +34,11 @@ object SshSpec : Spek({
         on("Executing Remote Command") {
             it("should return command result") {
                 runBlocking {
-                    val text = createSession(host = SshConfig.host, username = SshConfig.username)
+                    val text = createSession(
+                        host = SshConfig.host,
+                        username = SshConfig.username,
+                        password = SshConfig.password
+                    )
                         .use {
                             val exec = it.createChannel<ChannelExec>()
                             exec.setCommand("ls -alh")
@@ -50,7 +54,11 @@ object SshSpec : Spek({
 
             it("should return command result using helper") {
                 runBlocking {
-                    val text = "ls -alh".executeRemoteAsString(host = SshConfig.host, username = SshConfig.username)
+                    val text = "ls -alh".executeRemoteAsString(
+                        host = SshConfig.host,
+                        username = SshConfig.username,
+                        password = SshConfig.password
+                    )
                     text.shouldNotBeNullOrBlank()
                 }
             }
@@ -58,7 +66,11 @@ object SshSpec : Spek({
             it("should return line sequence") {
                 runBlocking {
                     val pingCount =
-                        "ping -c 2 google.com".executeRemote(host = SshConfig.host, username = SshConfig.username) {
+                        "ping -c 2 google.com".executeRemote(
+                            host = SshConfig.host,
+                            username = SshConfig.username,
+                            password = SshConfig.password
+                        ) {
                             val counter = AtomicInteger()
                             it.forEachLine {
                                 counter.incrementAndGet()

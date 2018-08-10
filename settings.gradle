@@ -1,2 +1,4 @@
 rootProject.name = 'fun-ssh'
 
+enableFeaturePreview('STABLE_PUBLISHING')
+
