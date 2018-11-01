@@ -17,21 +17,18 @@
 package id.jasoet.funssh
 
 import com.jcraft.jsch.ChannelExec
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.runBlocking
 import org.amshove.kluent.shouldBeGreaterThan
 import org.amshove.kluent.shouldNotBeNull
 import org.amshove.kluent.shouldNotBeNullOrBlank
-import org.jetbrains.spek.api.Spek
-import org.jetbrains.spek.api.dsl.given
-import org.jetbrains.spek.api.dsl.it
-import org.jetbrains.spek.api.dsl.on
+import org.spekframework.spek2.Spek
+import org.spekframework.spek2.style.specification.describe
 import java.util.concurrent.atomic.AtomicInteger
 
-object SshSpec : Spek({
+object SshExecSpec : Spek({
 
-    given("Ssh Extension") {
-
-        on("Executing Remote Command") {
+    describe("Ssh Extension") {
+        context("Executing Remote Command") {
             it("should return command result") {
                 runBlocking {
                     val text = createSession(

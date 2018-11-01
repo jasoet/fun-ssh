@@ -4,12 +4,12 @@
 [![codecov](https://codecov.io/gh/jasoet/fun-ssh/branch/master/graph/badge.svg)](https://codecov.io/gh/jasoet/fun-ssh)
 [![Download](https://api.bintray.com/packages/jasoet/fun/fun-ssh/images/download.svg)](https://bintray.com/jasoet/fun/fun-ssh/_latestVersion)
 
-Wrapper for Jsch with Kotlin DSL 
 
 ## Features
 - Kotlin DSL for [Jsch](http://www.jcraft.com/jsch/) (Pure Java SSH2 Implementation).
-- Create Ssh Session.
-- Create Ssh Channel.
+- Jsch [Example](http://www.jcraft.com/jsch/examples/).
+- Execute Remote Command.
+- Generate DSA and RSA KeyPair.
 
 ## Gradle
 
@@ -26,4 +26,6 @@ compile 'id.jasoet:fun-ssh:<version>'
 ```
 
 ## Usage
-### Execute simple command
+### Execute simple remote command
+
+### Generate DSA and RSA KeyPair
